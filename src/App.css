@@ -201,8 +201,10 @@ input:focus {
     margin-bottom: 10px;
 }
 /* --- THE ACTION BUTTON --- */
-.action-section { width: 100%; max-width: 800px; }
-.save-download-btn {
+.action-section {display: flex;
+  gap: 10px; /* spacing between buttons */
+  margin-top: 15px; }
+.save-download-btn, .print-btn {
     width: 100%; padding: 18px; font-size: 1.2rem; font-weight: 600;
     color: var(--white);  background: linear-gradient(45deg, var(--taj-gold), #c3a04d);
     border: none; border-radius: 10px; cursor: pointer; display: flex; justify-content: center;
@@ -212,7 +214,17 @@ input:focus {
 .save-download-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(173, 139, 58, 0.5);}
 .save-download-btn:disabled { background: #ad8b3a; cursor: not-allowed; }
 .save-download-btn svg { width: 24px; height: 24px; }
+.print-btn:hover {
+  background-color: #ad8b3a;
+}
 
+.print-btn {
+  background-color: #28a745; 
+}
+
+.print-btn:hover {
+  background-color: #1e7e34;
+}
 
 /* --- RESPONSIVENESS --- */
 @media (max-width: 768px) {
@@ -243,3 +255,73 @@ input:focus {
   font-weight: bolder;
   margin-top: 40px;
 }
+@media print {
+    .control-panel, .action-section {
+        display: none; /* Hide control panel and action buttons when printing */
+    }
+
+    /* --- Invoice Paper (Print Specific Styles) --- */
+    .invoice-paper {
+        width: 210mm; /* A4 width */
+        margin: 0; /* Remove margins */
+        box-shadow: none; /* No shadow in print */
+        border: none; /* No border in print */
+        padding: 10mm; /* Add some padding if needed */
+        font-size: 10pt; /* Adjust font size for print legibility */
+        page-break-after: avoid; /* Try to keep the entire invoice on one page */
+        overflow: hidden; /* Prevent content from spilling */
+        /* You might need to experiment with scale if content is still too large */
+        /* transform: scale(0.9); */
+        /* transform-origin: top left; */
+    }
+
+    /* --- Header (Print Specific Styles) --- */
+    .invoice-header {
+        margin-bottom: 10mm;
+    }
+
+    /* --- Table (Print Specific Styles) --- */
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10mm;
+    }
+
+    .items-table th, .items-table td {
+        border: 1px solid #ccc;
+        padding: 5px;
+        word-wrap: break-word; /* Ensure long item names wrap */
+    }
+
+    /* --- Summary (Print Specific Styles) --- */
+    .bill-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end; /* Align to bottom for signature/totals */
+        margin-top: 10mm;
+    }
+
+    .invoice-footer {
+        width: 50%; /* Adjust as needed */
+    }
+
+    .totals-table {
+        width: 45%; /* Adjust as needed */
+    }
+
+    .totals-table .label, .totals-table .value {
+        padding: 3px 0;
+    }
+
+    .grand-total .label, .grand-total .value {
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+
+    /* Ensure images are scaled correctly for print */
+    .taj-logo {
+        max-width: 50mm; /* Adjust logo size for print */
+        height: auto;
+    }
+}
+

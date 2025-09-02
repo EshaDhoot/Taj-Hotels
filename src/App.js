@@ -59,6 +59,49 @@ function App() {
         fetchLastInvoiceNumber();
     }, []);
 
+    const handlePrint = () => {
+        if (invoiceRef.current) {
+            const printWindow = window.open("", "_blank", "width=800,height=600");
+            const content = invoiceRef.current.innerHTML;
+
+            // Grab all styles from current document
+            const styles = Array.from(document.styleSheets)
+                .map((styleSheet) => {
+                    try {
+                        return Array.from(styleSheet.cssRules)
+                            .map((rule) => rule.cssText)
+                            .join("\n");
+                    } catch (e) {
+                        return "";
+                    }
+                })
+                .join("\n");
+
+            printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice</title>
+          <style>${styles}</style>
+        </head>
+        <body>
+          <div class="invoice-paper">
+            ${content}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() { window.close(); }
+            }
+          </script>
+        </body>
+      </html>
+    `);
+
+            printWindow.document.close();
+        }
+    };
+
+
     const handleItemChange = (index, event) => {
         const { name, value } = event.target;
         const list = [...items];
@@ -342,6 +385,9 @@ function App() {
             <div className="action-section">
                 <button className="save-download-btn" onClick={handleSaveAndDownload} disabled={loading}>
                     {loading ? 'Processing...' : (<><DownloadIcon /> Save & Download Bill</>)}
+                </button>
+                <button className="print-btn" onClick={handlePrint}>
+                    🖨️ Print Bill
                 </button>
             </div>
         </div>
