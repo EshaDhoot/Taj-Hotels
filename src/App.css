@@ -1,0 +1,226 @@
+:root {
+    --taj-gold: #ad8b3a;
+    --dark-brown: #422006;
+    --light-cream: #FFFBF5;
+    --border-light: #e4d9c6;
+    --white: #ffffff;
+    --gray-bg: #f3f4f6;
+    --danger-red: #ef4444;
+}
+
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--gray-bg);
+    color: var(--dark-brown);
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+}
+
+/* --- THE CONTROL PANEL --- */
+.control-panel {
+    background: var(--white);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    width: 100%;
+    max-width: 800px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+.control-panel-section h3 {
+    margin-top: 0;
+    font-size: 1.25rem;
+    color: var(--taj-gold);
+    border-bottom: 2px solid var(--border-light);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+.grid-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group label {
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+input[type="text"], input[type="tel"], input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+input:focus {
+    outline: none;
+    color: var(--taj-gold);
+    box-shadow: 0 0 0 3px rgba(173, 139, 58, 0.2);
+}
+
+.brand-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+}
+
+.taj-logo {
+    height: 70px;
+    width: auto;
+}
+
+.invoice-header h1 {
+    font-family: 'Laila', serif;
+    font-size: 3rem;
+    color: var(--taj-gold); /* Taj brand orange */
+    margin: 0;
+}
+
+/* Items in Control Panel */
+.item-entry {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 40px;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 10px;
+}
+.item-entry .form-group {
+    margin: 0;
+}
+.item-controls {
+    margin-top: 15px;
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+}
+.item-controls button {
+    padding: 10px 20px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.add-item-btn {  background-color: var(--taj-gold); color: var(--white); }
+.add-item-btn:hover { background-color: #c3a04d; }
+.remove-item-btn { background-color: var(--danger-red); color: var(--white); }
+.remove-item-btn:hover { background-color: #c3a04d; }
+.remove-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--danger-red);
+    padding: 12px 0;
+}
+.remove-icon-btn svg { width: 24px; height: 24px; }
+
+
+/* --- THE BILL PREVIEW --- */
+.invoice-paper {
+    background: var(--light-cream);
+    width: 100%;
+    max-width: 800px;
+    padding: 40px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    color: var(--dark-brown);
+}
+.invoice-header {
+    text-align: center;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--taj-gold);;
+}
+.invoice-header h1 {
+    font-family: 'Laila', serif;
+    font-size: 3rem;
+    color: var(--taj-gold);
+    margin: 0;
+}
+.invoice-header p { margin: 4px 0; font-size: 0.9rem; }
+.details-section {
+    display: flex;
+    justify-content: space-between;
+    margin: 25px 0;
+    padding-bottom: 25px;
+    border-bottom: 1px dashed var(--border-light);
+    font-size: 0.95rem;
+}
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+}
+.items-table thead tr { border-bottom: 2px solid var(--dark-brown); }
+.items-table th { padding: 12px 10px; text-align: left; font-weight: 600; }
+.items-table td { padding: 15px 10px; border-bottom: 1px solid var(--border-light); }
+.items-table .align-right { text-align: right; }
+.items-table .sno { text-align: center; }
+.bill-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+.invoice-footer { text-align: center; }
+.signature-img { height: 50px; margin-bottom: -5px; }
+.invoice-footer p { margin: 0; padding-top: 5px; border-top: 1px solid var(--dark-brown); font-weight: 500; }
+.totals-table { width: 45%; font-size: 1rem; }
+.totals-table td { padding: 8px 0; }
+.totals-table .label { text-align: right; padding-right: 20px; color: #785a44; }
+.totals-table .value { text-align: right; font-weight: 600; }
+.grand-total td {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--taj-gold);
+    border-top: 2px solid var(--dark-brown);
+    padding-top: 10px;
+}
+
+/* --- THE ACTION BUTTON --- */
+.action-section { width: 100%; max-width: 800px; }
+.save-download-btn {
+    width: 100%; padding: 18px; font-size: 1.2rem; font-weight: 600;
+    color: var(--white);  background: linear-gradient(45deg, var(--taj-gold), #c3a04d);
+    border: none; border-radius: 10px; cursor: pointer; display: flex; justify-content: center;
+    align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(173, 139, 58, 0.4);
+    transition: all 0.3s ease;
+}
+.save-download-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(173, 139, 58, 0.5);}
+.save-download-btn:disabled { background: #ad8b3a; cursor: not-allowed; }
+.save-download-btn svg { width: 24px; height: 24px; }
+
+
+/* --- RESPONSIVENESS --- */
+@media (max-width: 768px) {
+    .grid-form, .item-entry { grid-template-columns: 1fr; }
+    .invoice-paper { padding: 20px; }
+    .invoice-header h1 { font-size: 2.5rem; }
+    .details-section, .bill-summary { flex-direction: column; gap: 30px; align-items: stretch; }
+    .totals-table { width: 100%; }
+    .invoice-footer { align-self: center; }
+    .items-table { font-size: 0.9rem; }
+    .items-table td, .items-table th { padding: 10px 5px; }
+}
+#rupee{
+  text-align: center;
+  font-weight: bolder;
+  margin-top: 40px;
+}
