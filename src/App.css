@@ -193,7 +193,13 @@ input:focus {
     border-top: 2px solid var(--dark-brown);
     padding-top: 10px;
 }
-
+.item-entry-with-gst {
+    display: grid;
+    grid-template-columns: 2.5fr 1fr 1fr 1fr 40px; /* Adjusted columns for GST */
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 10px;
+}
 /* --- THE ACTION BUTTON --- */
 .action-section { width: 100%; max-width: 800px; }
 .save-download-btn {
@@ -211,6 +217,19 @@ input:focus {
 /* --- RESPONSIVENESS --- */
 @media (max-width: 768px) {
     .grid-form, .item-entry { grid-template-columns: 1fr; }
+    .invoice-paper { padding: 20px; }
+    .invoice-header h1 { font-size: 2.5rem; }
+    .details-section, .bill-summary { flex-direction: column; gap: 30px; align-items: stretch; }
+    .totals-table { width: 100%; }
+    .invoice-footer { align-self: center; }
+    .items-table { font-size: 0.9rem; }
+    .items-table td, .items-table th { padding: 10px 5px; }
+    .grid-form {
+        grid-template-columns: 1fr;
+    }
+    .item-entry-with-gst { /* New media query for item entry */
+        grid-template-columns: 1fr;
+    }
     .invoice-paper { padding: 20px; }
     .invoice-header h1 { font-size: 2.5rem; }
     .details-section, .bill-summary { flex-direction: column; gap: 30px; align-items: stretch; }

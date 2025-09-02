@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import './App.css';
-import signatureImage from './signature.png';
+import signatureImage from './signature.png'; // Make sure this image exists or remove its usage
 
 const DownloadIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -15,25 +15,65 @@ const TrashIcon = () => (
     </svg>
 );
 
+// Helper to format invoice numbers
+const formatInvoiceNumber = (num) => String(num).padStart(4, '0');
+
 function App() {
     const invoiceRef = useRef(null);
     const [customerName, setCustomerName] = useState('');
     const [customerMobile, setCustomerMobile] = useState('');
-    const [items, setItems] = useState([{ name: '', qty: '', rate: '' }]);
-    const [gstPercentage, setGstPercentage] = useState(18);
+    // Each item now includes its own gstPercentage
+    const [items, setItems] = useState([{ name: '', qty: '', rate: '', gstPercentage: 0 }]);
+    const [discountPercentage, setDiscountPercentage] = useState(0); // New state for discount
     const [loading, setLoading] = useState(false);
+    const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState(1001); // Starting series for THM-1001
 
-    const invoiceNumber = `THM-${Math.floor(100000 + Math.random() * 900000)}`;
+    // Generate Invoice number and Date
+    const invoiceNumber = `THM-${formatInvoiceNumber(currentInvoiceNumber)}`;
     const date = new Date().toLocaleDateString('en-GB');
+
+    // Fetch the last invoice number from the backend on component mount
+    useEffect(() => {
+        const fetchLastInvoiceNumber = async () => {
+            try {
+                const response = await fetch('https://balajimawa.onrender.com/api/bills');
+                if (response.ok) {
+                    const bills = await response.json();
+                    if (bills && bills.length > 0) {
+                        // Find the highest number from existing THM-XXXX invoices
+                        const highestNum = bills.reduce((max, bill) => {
+                            const match = bill.invoiceNumber.match(/^THM-(\d+)$/);
+                            if (match) {
+                                return Math.max(max, parseInt(match[1], 10));
+                            }
+                            return max;
+                        }, 1000); // Start from 1000 if no THM- series found
+                        setCurrentInvoiceNumber(highestNum + 1);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch last invoice number:", error);
+                // If fetching fails, we'll just start from 1001
+            }
+        };
+        fetchLastInvoiceNumber();
+    }, []);
 
     const handleItemChange = (index, event) => {
         const { name, value } = event.target;
         const list = [...items];
-        list[index][name] = value;
+
+        if (['qty', 'rate', 'gstPercentage'].includes(name)) {
+            list[index][name] = value === "" ? "" : parseFloat(value);
+        } else {
+            list[index][name] = value;
+        }
+
         setItems(list);
     };
 
-    const handleAddItem = () => setItems([...items, { name: '', qty: '', rate: '' }]);
+
+    const handleAddItem = () => setItems([...items, { name: '', qty: '', rate: '', gstPercentage: 0 }]);
 
     const handleRemoveItem = (index) => {
         const list = [...items];
@@ -41,11 +81,46 @@ function App() {
         setItems(list);
     };
 
-    const calculateTotal = (qty, rate) => (parseFloat(qty) * parseFloat(rate)) || 0;
-    const subTotal = items.reduce((acc, item) => acc + calculateTotal(item.qty, item.rate), 0);
-    const cgst = (subTotal * (gstPercentage / 2)) / 100;
-    const sgst = (subTotal * (gstPercentage / 2)) / 100;
-    const grandTotal = subTotal + cgst + sgst;
+    // Calculate item total *before* its own GST
+    const calculateItemSubTotal = (qty, rate) => (parseFloat(qty) * parseFloat(rate)) || 0;
+
+    // Calculate item total *including* its own GST
+    const calculateItemTotalWithGST = (qty, rate, gst) => {
+        const itemSubTotal = calculateItemSubTotal(qty, rate);
+        return itemSubTotal * (1 + (gst / 100));
+    };
+
+    // Sum of all item sub-totals (before item-level GST)
+    const totalItemsSubTotal = items.reduce((acc, item) => acc + calculateItemSubTotal(item.qty, item.rate), 0);
+
+    // Sum of all item-level GSTs
+    const totalItemsGSTAmount = items.reduce((acc, item) => {
+        const itemSubTotal = calculateItemSubTotal(item.qty, item.rate);
+        return acc + (itemSubTotal * (item.gstPercentage / 100));
+    }, 0);
+
+    // Subtotal including all item-level GSTs, before discount
+    const subTotalWithAllGST = totalItemsSubTotal + totalItemsGSTAmount;
+
+    // Calculate discount amount
+    const discountAmount = subTotalWithAllGST * (discountPercentage / 100);
+
+    // Grand total after discount
+    const grandTotalAfterDiscount = subTotalWithAllGST - discountAmount;
+
+    // For backend compatibility: we'll sum all item GSTs and represent it as a single GST percentage and amounts.
+    // This is a simplification to fit the existing backend schema.
+    // In a real-world scenario, the backend schema should be updated to handle per-item GST.
+    const effectiveTotalGSTAmount = totalItemsGSTAmount;
+    const effectiveCGST = effectiveTotalGSTAmount / 2;
+    const effectiveSGST = effectiveTotalGSTAmount / 2;
+
+    // We need an "overall GST percentage" for the backend, even if it's not truly applied uniformly.
+    // If totalItemsSubTotal is 0, effectiveGstPercentage will be 0 to avoid division by zero.
+    const effectiveGstPercentageForBackend = totalItemsSubTotal > 0
+        ? (effectiveTotalGSTAmount / totalItemsSubTotal) * 100
+        : 0;
+
 
     const handleSaveAndDownload = async () => {
         if (!customerName || !customerMobile) {
@@ -59,9 +134,24 @@ function App() {
         setLoading(true);
 
         const billData = {
-            invoiceNumber, date: new Date(), customerName, customerMobile,
-            items: items.map((item, index) => ({ ...item, sno: index + 1, total: calculateTotal(item.qty, item.rate) })),
-            subTotal, gstPercentage, cgst, sgst, grandTotal,
+            invoiceNumber,
+            date: new Date(),
+            customerName,
+            customerMobile,
+            items: items.map((item, index) => ({
+                ...item,
+                sno: index + 1,
+                // The 'total' field in backend schema likely means subtotal without GST.
+                // We'll calculate it this way to fit the existing schema,
+                // but in frontend display, we show total with item-level GST.
+                total: calculateItemSubTotal(item.qty, item.rate),
+            })),
+            subTotal: totalItemsSubTotal, // This is the sum of item base totals (before any GST)
+            gstPercentage: effectiveGstPercentageForBackend, // Represents the overall effective GST rate
+            cgst: effectiveCGST,
+            sgst: effectiveSGST,
+            grandTotal: grandTotalAfterDiscount,
+            // You might want to add discountPercentage to the backend schema if you need to store it
         };
 
         try {
@@ -74,6 +164,7 @@ function App() {
             if (!response.ok) throw new Error(result.message || 'Failed to save bill.');
 
             alert(`Bill Saved! Invoice #: ${result.bill.invoiceNumber}. Downloading image...`);
+            setCurrentInvoiceNumber(prev => prev + 1); // Increment for the next bill
 
             if (invoiceRef.current) {
                 const dataUrl = await toPng(invoiceRef.current, { pixelRatio: 2.5 });
@@ -82,6 +173,10 @@ function App() {
                 link.href = dataUrl;
                 link.click();
             }
+            setCustomerName('');
+            setCustomerMobile('');
+            setItems([{ name: '', qty: '', rate: '', gstPercentage: 0 }]);
+            setDiscountPercentage(0);
         } catch (error) {
             console.error('Error in operation:', error);
             alert(`Operation Failed: ${error.message}`);
@@ -111,18 +206,40 @@ function App() {
                 <div className="control-panel-section">
                     <h3>Items</h3>
                     {items.map((item, index) => (
-                        <div key={index} className="item-entry">
+                        <div key={index} className="item-entry-with-gst"> {/* Changed class name */}
                             <div className="form-group">
                                 <label>Item Name</label>
                                 <input type="text" name="name" value={item.name} onChange={(e) => handleItemChange(index, e)} placeholder="Mawa, Paneer, etc." />
                             </div>
                             <div className="form-group">
                                 <label>Quantity</label>
-                                <input type="number" name="qty" value={item.qty} onChange={(e) => handleItemChange(index, e)} placeholder="e.g., 1.5" />
+                                <input type="number" name="qty" value={item.qty} onChange={(e) => handleItemChange(index, e)} placeholder="e.g., 1.5" min="0" onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                        const list = [...items];
+                                        list[index].qty = 0;
+                                        setItems(list);
+                                    }
+                                }} />
                             </div>
                             <div className="form-group">
                                 <label>Rate (₹)</label>
-                                <input type="number" name="rate" value={item.rate} onChange={(e) => handleItemChange(index, e)} placeholder="e.g., 350" />
+                                <input type="number" name="rate" value={item.rate} onChange={(e) => handleItemChange(index, e)} placeholder="e.g., 350" min="0" onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                        const list = [...items];
+                                        list[index].qty = 0;
+                                        setItems(list);
+                                    }
+                                }} />
+                            </div>
+                            <div className="form-group">
+                                <label>GST (%)</label>
+                                <input type="number" name="gstPercentage" value={item.gstPercentage} onChange={(e) => handleItemChange(index, e)} placeholder="e.g., 5, 18" min="0" onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                        const list = [...items];
+                                        list[index].qty = 0;
+                                        setItems(list);
+                                    }
+                                }} />
                             </div>
                             <button className="remove-icon-btn" onClick={() => handleRemoveItem(index)} aria-label="Remove Item">
                                 <TrashIcon />
@@ -135,10 +252,13 @@ function App() {
                 </div>
 
                 <div className="control-panel-section">
-                    <h3>Tax Details</h3>
+                    <h3>Discount</h3>
                     <div className="form-group" style={{ maxWidth: '150px' }}>
-                        <label htmlFor="gst">GST Percentage (%)</label>
-                        <input id="gst" type="number" value={gstPercentage} onChange={(e) => setGstPercentage(parseFloat(e.target.value) || 0)} />
+                        <label htmlFor="discount">Discount Percentage (%)</label>
+                        <input id="discount" type="number" value={discountPercentage} onChange={(e) => {
+                            const value = e.target.value;
+                            setDiscountPercentage(value === "" ? "" : parseFloat(value));
+                        }} min="0" />
                     </div>
                 </div>
             </div>
@@ -177,6 +297,7 @@ function App() {
                                 <th>Item Description</th>
                                 <th className="align-right">Qty</th>
                                 <th className="align-right">Rate (₹)</th>
+                                <th className="align-right">GST (%)</th> {/* New column */}
                                 <th className="align-right">Total (₹)</th>
                             </tr>
                         </thead>
@@ -187,23 +308,30 @@ function App() {
                                     <td>{item.name || '...'}</td>
                                     <td className="align-right">{item.qty || '...'}</td>
                                     <td className="align-right">{item.rate ? parseFloat(item.rate).toFixed(2) : '...'}</td>
-                                    <td className="align-right"><strong>{calculateTotal(item.qty, item.rate).toFixed(2)}</strong></td>
+                                    <td className="align-right">{item.gstPercentage ? item.gstPercentage.toFixed(0) : '0'}</td> {/* Display item GST */}
+                                    <td className="align-right"><strong>{calculateItemTotalWithGST(item.qty, item.rate, item.gstPercentage).toFixed(2)}</strong></td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </section>
                 <div className="bill-summary">
-                        <div className="invoice-footer">
-                            {/* <img src={signatureImage} alt="Signature" className="signature-img" />
-                            <p>Authorised Signatory</p> */}
-                        </div>
+                    <div className="invoice-footer">
+                        {/* <img src={signatureImage} alt="Signature" className="signature-img" />
+                        <p>Authorised Signatory</p> */}
+                    </div>
                     <table className="totals-table">
                         <tbody>
-                            <tr><td className="label">Sub Total:</td><td className="value">₹{subTotal.toFixed(2)}</td></tr>
-                            <tr><td className="label">CGST @ {(gstPercentage / 2).toFixed(2)}%</td><td className="value">₹{cgst.toFixed(2)}</td></tr>
-                            <tr><td className="label">SGST @ {(gstPercentage / 2).toFixed(2)}%</td><td className="value">₹{sgst.toFixed(2)}</td></tr>
-                            <tr className="grand-total"><td className="label">Grand Total:</td><td className="value">₹{grandTotal.toFixed(2)}</td></tr>
+                            <tr><td className="label">Items Sub Total:</td><td className="value">₹{totalItemsSubTotal.toFixed(2)}</td></tr>
+                            <tr><td className="label">Total GST Amount:</td><td className="value">₹{totalItemsGSTAmount.toFixed(2)}</td></tr>
+                            <tr><td className="label">Sub Total (Incl. GST):</td><td className="value">₹{subTotalWithAllGST.toFixed(2)}</td></tr>
+                            {discountPercentage > 0 && (
+                                <tr>
+                                    <td className="label">Discount ({discountPercentage.toFixed(0)}%):</td>
+                                    <td className="value">-₹{discountAmount.toFixed(2)}</td>
+                                </tr>
+                            )}
+                            <tr className="grand-total"><td className="label">Grand Total:</td><td className="value">₹{grandTotalAfterDiscount.toFixed(2)}</td></tr>
                         </tbody>
                     </table>
                 </div>
